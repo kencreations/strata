@@ -1,0 +1,68 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String          @id @default(uuid())
+  email         String          @unique
+  passwordHash  String
+  fullName      String
+  role          String          @default("student")
+  authProvider  String          @default("email")
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  scheduleLayers ScheduleLayer[]
+  vaultDocuments VaultDocument[]
+}
+
+model ScheduleLayer {
+  id        String   @id @default(uuid())
+  userId    String
+  layerName String
+  colorCode String
+  isActive  Boolean  @default(true)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events    Event[]
+}
+
+model Event {
+  id          String        @id @default(uuid())
+  layerId     String
+  title       String
+  location    String?
+  startTime   DateTime
+  endTime     DateTime
+  daysOfWeek  Int[]
+  isRecurring Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  layer       ScheduleLayer @relation(fields: [layerId], references: [id], onDelete: Cascade)
+}
+
+model VaultDocument {
+  id         String      @id @default(uuid())
+  userId     String
+  courseId   String?
+  fileName   String
+  filePath   String
+  fileType   String
+  createdAt  DateTime    @default(now())
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flashcards Flashcard[]
+}
+
+model Flashcard {
+  id         String        @id @default(uuid())
+  documentId String
+  question   String
+  answer     String
+  easeFactor Float         @default(2.5)
+  interval   Int           @default(0)
+  repetitions Int          @default(0)
+  nextReview DateTime      @default(now())
+  document   VaultDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+}
