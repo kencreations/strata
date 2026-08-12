@@ -95,11 +95,12 @@ export interface SM2Result {
   nextReview: string; // ISO8601 date
 }
 
-export interface ParsedCourse {
+export interface ParsedCourseItem {
+  id: string;
   courseName: string;
   days: DayOfWeek[];
-  startTime: string; // "HH:MM"
+  startTime: string; // "07:00 AM"
   endTime: string;
   location: string;
-  layerType: 'academic' | 'work' | 'routine';
+  layerId?: string; // Default: Academic layer ID
 }

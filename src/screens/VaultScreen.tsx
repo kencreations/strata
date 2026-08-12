@@ -35,7 +35,9 @@ export const VaultScreen: React.FC = () => {
     generateStudySet, 
     isProcessing, 
     processingStatus,
-    parsedCourses 
+    parsedCourses,
+    removeDocument,
+    clearAll 
   } = useVaultStore();
 
   const [search, setSearch] = useState('');
@@ -45,6 +47,17 @@ export const VaultScreen: React.FC = () => {
   useEffect(() => {
     if (isFocused && user) loadDocuments(user.id);
   }, [isFocused, user]);
+
+  // Auto-cleanup legacy sched.pdf from Vault
+  useEffect(() => {
+    if (documents.length > 0) {
+      documents.forEach((doc) => {
+        if (doc.fileName.toLowerCase().includes('sched.pdf')) {
+          removeDocument(doc.id);
+        }
+      });
+    }
+  }, [documents, removeDocument]);
 
   useEffect(() => {
     if (documents.length > 0 && !selectedDocId) {
@@ -103,7 +116,7 @@ export const VaultScreen: React.FC = () => {
           <MaterialIcons name="mic" size={22} color={Colors.onSurfaceVariant} />
         </View>
 
-        {/* Filter Chips & Upload */}
+        {/* Filter Chips & Actions */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
             {FILTERS.map((f) => (
@@ -112,9 +125,14 @@ export const VaultScreen: React.FC = () => {
               </TouchableOpacity>
             ))}
           </ScrollView>
-          <TouchableOpacity style={styles.uploadBtn} onPress={handleUpload}>
-            <MaterialIcons name="file-upload" size={20} color={Colors.onPrimaryContainer} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity style={styles.actionBtn} onPress={() => clearAll()}>
+              <MaterialIcons name="delete-sweep" size={20} color={Colors.error} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: Colors.primaryContainer }]} onPress={handleUpload}>
+              <MaterialIcons name="file-upload" size={20} color={Colors.onPrimaryContainer} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* File List */}
@@ -138,7 +156,10 @@ export const VaultScreen: React.FC = () => {
                     <Text style={styles.fileName} numberOfLines={1}>{file.fileName}</Text>
                     <Text style={styles.fileSub}>{new Date(file.createdAt).toLocaleDateString()}</Text>
                   </View>
-                  {isSelected && <MaterialIcons name="check-circle" size={20} color={Colors.primary} />}
+                  <TouchableOpacity onPress={() => removeDocument(file.id)} style={{ padding: 4 }}>
+                    <MaterialIcons name="delete-outline" size={20} color={Colors.error} />
+                  </TouchableOpacity>
+                  {isSelected && <MaterialIcons name="check-circle" size={20} color={Colors.primary} style={{ marginLeft: 4 }} />}
                 </View>
               </TouchableOpacity>
             );
@@ -213,7 +234,7 @@ const styles = StyleSheet.create({
   filterChipActive: { backgroundColor: Colors.onSurface },
   filterText: { ...Typography.labelMd, color: Colors.onSurfaceVariant },
   filterTextActive: { color: Colors.surface },
-  uploadBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.primaryContainer, alignItems: 'center', justifyContent: 'center' },
+  actionBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.surfaceContainerHigh, alignItems: 'center', justifyContent: 'center' },
   fileList: { gap: Spacing.stackSm },
   fileCard: { backgroundColor: Colors.surfaceContainerLowest, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 14, paddingLeft: 18, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
   fileStrip: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, borderTopLeftRadius: 16, borderBottomLeftRadius: 16 },

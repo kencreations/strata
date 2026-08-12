@@ -1,13 +1,15 @@
-import * as DocumentPicker from 'expo-document-picker';
-import type { ParsedCourse } from '../db/types';
+import * as DocumentPicker from "expo-document-picker";
+import { File } from "expo-file-system";
+import { api } from "../services/authService";
+import type { ParsedCourseItem } from "../db/types";
 
 // ─── Document Picker ──────────────────────────────────────────────────────────
 
 export interface PickedFile {
-  uri: string;
-  name: string;
-  mimeType: string;
-  size?: number;
+    uri: string;
+    name: string;
+    mimeType: string;
+    size?: number;
 }
 
 /**
@@ -15,21 +17,21 @@ export interface PickedFile {
  * Returns null if user cancels.
  */
 export async function pickDocument(): Promise<PickedFile | null> {
-  const result = await DocumentPicker.getDocumentAsync({
-    type: ['application/pdf', 'image/*'],
-    copyToCacheDirectory: true,
-    multiple: false,
-  });
+    const result = await DocumentPicker.getDocumentAsync({
+        type: ["application/pdf", "image/*"],
+        copyToCacheDirectory: true,
+        multiple: false,
+    });
 
-  if (result.canceled || result.assets.length === 0) return null;
+    if (result.canceled || result.assets.length === 0) return null;
 
-  const asset = result.assets[0];
-  return {
-    uri: asset.uri,
-    name: asset.name,
-    mimeType: asset.mimeType ?? 'application/octet-stream',
-    size: asset.size,
-  };
+    const asset = result.assets[0];
+    return {
+        uri: asset.uri,
+        name: asset.name,
+        mimeType: asset.mimeType ?? "application/octet-stream",
+        size: asset.size,
+    };
 }
 
 // ─── AI Parser Pipeline ───────────────────────────────────────────────────────
@@ -53,50 +55,58 @@ export async function pickDocument(): Promise<PickedFile | null> {
  *   4. Parse JSON response into ParsedCourse[]
  * ─────────────────────────────────────────────────────
  */
-export async function parseDocument(file: PickedFile): Promise<ParsedCourse[]> {
-  // Simulate processing delay
-  await new Promise((r) => setTimeout(r, 1500));
+export async function parseDocument(file: PickedFile): Promise<ParsedCourseItem[]> {
+    // Simulate processing time
+    await new Promise((r) => setTimeout(r, 1500));
 
-  // Mock extracted course data based on file name heuristics
-  const name = file.name.toLowerCase();
-
-  if (name.includes('syllabus') || name.includes('statics')) {
+    // Return the hardcoded multi-course offline mock array matching sched.pdf
     return [
-      {
-        courseName: 'Computer Engineering Statics',
-        days: [2, 4], // Tue, Thu
-        startTime: '10:00',
-        endTime: '11:30',
-        location: 'Room 402, Engineering Bldg',
-        layerType: 'academic',
-      },
+        {
+            id: 'mock-1',
+            courseName: 'PHYS 102',
+            days: [3, 4], // Wed, Thu
+            startTime: '07:00 AM',
+            endTime: '10:00 AM',
+            location: 'RM 401 (CICS) / RM 103 (CICS)',
+            layerId: undefined, // Default to academic later
+        },
+        {
+            id: 'mock-2',
+            courseName: 'GED 103',
+            days: [1, 4], // Mon, Thu
+            startTime: '10:00 AM',
+            endTime: '01:00 PM',
+            location: 'ONLINE',
+            layerId: undefined,
+        },
+        {
+            id: 'mock-3',
+            courseName: 'PHYS 102',
+            days: [6], // Sat
+            startTime: '10:00 AM',
+            endTime: '01:00 PM',
+            location: 'RM 202 (CICS)',
+            layerId: undefined,
+        },
+        {
+            id: 'mock-4',
+            courseName: 'PHYS 102',
+            days: [2, 5], // Tue, Fri
+            startTime: '02:00 PM',
+            endTime: '05:00 PM',
+            location: 'ONLINE',
+            layerId: undefined,
+        },
+        {
+            id: 'mock-5',
+            courseName: 'GED 103',
+            days: [6], // Sat
+            startTime: '02:00 PM',
+            endTime: '05:00 PM',
+            location: 'RM 201 (CICS)',
+            layerId: undefined,
+        }
     ];
-  }
-
-  if (name.includes('python') || name.includes('guideline')) {
-    return [
-      {
-        courseName: 'Python Mentoring Session',
-        days: [2], // Tue
-        startTime: '14:30',
-        endTime: '16:00',
-        location: 'CS Lab',
-        layerType: 'work',
-      },
-    ];
-  }
-
-  // Default fallback mock
-  return [
-    {
-      courseName: 'Extracted Course',
-      days: [1, 3], // Mon, Wed
-      startTime: '09:00',
-      endTime: '10:30',
-      location: 'TBD',
-      layerType: 'academic',
-    },
-  ];
 }
 
 /**
@@ -107,28 +117,26 @@ export async function parseDocument(file: PickedFile): Promise<ParsedCourse[]> {
  *   "Generate 10 flashcards as JSON: [{question, answer}]"
  */
 export async function generateFlashcardsFromDocument(
-  _documentText: string,
-  courseContext?: string
+    _documentText: string,
+    courseContext?: string,
 ): Promise<Array<{ question: string; answer: string }>> {
-  await new Promise((r) => setTimeout(r, 2000));
+    await new Promise((r) => setTimeout(r, 2000));
 
-  // Mock output
-  return [
-    {
-      question: `What is the fundamental principle of ${courseContext ?? 'the course'}?`,
-      answer: 'The sum of all forces in a static system must equal zero (ΣF = 0).',
-    },
-    {
-      question: 'Define a free body diagram.',
-      answer:
-        'A diagram that depicts all external forces and moments acting on an isolated object.',
-    },
-    {
-      question: 'What is the moment of a force?',
-      answer:
-        'The tendency of a force to rotate a body about a point. M = F × d, where d is the perpendicular distance.',
-    },
-  ];
+    // Mock output
+    return [
+        {
+            question: `What is the fundamental principle of ${courseContext ?? "the course"}?`,
+            answer: "The sum of all forces in a static system must equal zero (ΣF = 0).",
+        },
+        {
+            question: "Define a free body diagram.",
+            answer: "A diagram that depicts all external forces and moments acting on an isolated object.",
+        },
+        {
+            question: "What is the moment of a force?",
+            answer: "The tendency of a force to rotate a body about a point. M = F × d, where d is the perpendicular distance.",
+        },
+    ];
 }
 
 // ─── Prompt template (for when LLM is enabled post-eject) ────────────────────

@@ -62,6 +62,12 @@ export async function deleteDocument(id: string): Promise<void> {
   await enqueueSyncChange('vault_documents', 'DELETE', id, { id });
 }
 
+export async function clearAllDocuments(): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(`DELETE FROM vault_documents`);
+  // Synchronization logic for bulk delete may vary; for local offline-first we just wipe.
+}
+
 // ─── Internal ─────────────────────────────────────────────────────────────────
 function rowToDoc(row: any): VaultDocument {
   return {

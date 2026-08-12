@@ -33,9 +33,15 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 type TabIcon = 'home' | 'calendar-month' | 'timer' | 'folder-open' | 'person';
 
+import { useVaultStore } from '../store/vaultStore';
+
 function MainTabs() {
+  const { parsedCourses } = useVaultStore();
+  const initialRoute = parsedCourses.length > 0 ? 'Planner' : 'Home';
+
   return (
     <Tab.Navigator
+      initialRouteName={initialRoute}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarShowLabel: true,

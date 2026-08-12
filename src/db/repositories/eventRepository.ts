@@ -12,6 +12,12 @@ function todayDateStr(): string {
 
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
+export async function getTotalEventCount(): Promise<number> {
+  const db = await getDatabase();
+  const result = await db.getFirstAsync<{ count: number }>(`SELECT COUNT(*) as count FROM events`);
+  return result?.count || 0;
+}
+
 /**
  * Fetch all events for today: union of non-recurring events today + recurring
  * events whose daysOfWeek includes today's day-of-week.
@@ -36,6 +42,23 @@ export async function getTodayEvents(userId: string): Promise<Event[]> {
     [userId, today, String(dayOfWeek)]
   );
 
+  return rows.map(rowToEvent);
+}
+
+/**
+ * Fetch all events (recurring and single) for the user.
+ */
+export async function getAllEvents(userId: string): Promise<Event[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<any>(
+    `SELECT e.*, sl.color_code as layerColor, sl.layer_name as layerName
+     FROM events e
+     JOIN schedule_layers sl ON sl.id = e.layer_id
+     WHERE sl.user_id = ?
+       AND sl.is_active = 1
+     ORDER BY e.start_time ASC`,
+    [userId]
+  );
   return rows.map(rowToEvent);
 }
 
@@ -129,6 +152,12 @@ export async function deleteEvent(id: string): Promise<void> {
   await enqueueSyncChange('events', 'DELETE', id, { id });
 }
 
+export async function clearEventsByLayer(layerId: string): Promise<void> {
+  const db = await getDatabase();
+  // Mark as sync deleted? For now just simple delete since it's local rewrite
+  await db.runAsync(`DELETE FROM events WHERE layer_id = ?`, [layerId]);
+}
+
 // ─── Schedule layers ──────────────────────────────────────────────────────────
 export async function getScheduleLayers(userId: string) {
   const db = await getDatabase();
@@ -136,6 +165,22 @@ export async function getScheduleLayers(userId: string) {
     `SELECT * FROM schedule_layers WHERE user_id = ? ORDER BY layer_name`,
     [userId]
   );
+}
+
+export async function insertScheduleLayer(
+  userId: string,
+  layerName: string,
+  colorCode: string
+): Promise<string> {
+  const db = await getDatabase();
+  const id = generateId();
+  await db.runAsync(
+    `INSERT INTO schedule_layers (id, user_id, layer_name, color_code, is_active)
+     VALUES (?, ?, ?, ?, ?)`,
+    [id, userId, layerName, colorCode, 1]
+  );
+  await enqueueSyncChange('schedule_layers', 'INSERT', id, { id, userId, layerName, colorCode, isActive: 1 });
+  return id;
 }
 
 // ─── Internal ─────────────────────────────────────────────────────────────────

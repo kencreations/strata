@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import type { VaultDocument, ParsedCourse } from '../db/types';
-import { getAllDocuments, insertDocument } from '../db/repositories/vaultRepository';
+import type { VaultDocument, ParsedCourseItem } from '../db/types';
+import { getAllDocuments, insertDocument, deleteDocument, clearAllDocuments } from '../db/repositories/vaultRepository';
 import { insertFlashcards, deleteCardsByDocument } from '../db/repositories/flashcardRepository';
 import {
   pickDocument,
@@ -12,7 +12,7 @@ import { GUEST_USER_ID } from '../db/migrations';
 
 interface VaultState {
   documents: VaultDocument[];
-  parsedCourses: ParsedCourse[];
+  parsedCourses: ParsedCourseItem[];
   isPickingDocument: boolean;
   isProcessing: boolean;
   processingStatus: string;
@@ -20,9 +20,11 @@ interface VaultState {
 
   // Actions
   loadDocuments: (userId?: string) => Promise<void>;
-  pickAndParse: () => Promise<ParsedCourse[] | null>;
+  pickAndParse: () => Promise<ParsedCourseItem[] | null>;
   generateStudySet: (documentId: string) => Promise<number>;
   clearParsed: () => void;
+  removeDocument: (id: string) => Promise<void>;
+  clearAll: () => Promise<void>;
 }
 
 export const useVaultStore = create<VaultState>((set, get) => ({
@@ -49,19 +51,10 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
       set({ isPickingDocument: false, isProcessing: true, processingStatus: 'Saving file…' });
 
-      // Save document record
-      const docId = await insertDocument({
-        userId: GUEST_USER_ID,
-        fileName: file.name,
-        filePath: file.uri,
-        fileType: file.mimeType,
-      });
-
       set({ processingStatus: 'Reading with AI…' });
       const parsed = await parseDocument(file);
 
-      // Reload documents
-      await get().loadDocuments();
+      // Do NOT insert schedule PDFs into the vault_documents table.
 
       set({ parsedCourses: parsed });
       return parsed;
@@ -93,4 +86,22 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   },
 
   clearParsed: () => set({ parsedCourses: [] }),
+
+  removeDocument: async (id: string) => {
+    try {
+      await deleteDocument(id);
+      set((state) => ({ documents: state.documents.filter(d => d.id !== id) }));
+    } catch (e) {
+      console.error('Failed to delete document:', e);
+    }
+  },
+
+  clearAll: async () => {
+    try {
+      await clearAllDocuments();
+      set({ documents: [] });
+    } catch (e) {
+      console.error('Failed to clear vault:', e);
+    }
+  },
 }));

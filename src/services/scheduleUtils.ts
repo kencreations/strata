@@ -153,12 +153,40 @@ export function getUpNextEvent(events: Event[], now = new Date()): Event | null 
 }
 
 /**
- * Formats seconds into "MM:SS" string.
+ * Formats a date string to strict 12-hour format (e.g. "2:00 PM").
+ */
+export function formatTime12Hour(dateString: string): string {
+  const d = new Date(dateString);
+  let h = d.getHours();
+  const m = d.getMinutes().toString().padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  h = h ? h : 12; // 0 should be 12
+  return `${h}:${m} ${ampm}`;
+}
+
+export function formatTimeRange(start: string, end: string): string {
+  return `${formatTime12Hour(start)} - ${formatTime12Hour(end)}`;
+}
+
+/**
+ * Formats seconds into "X hrs Y mins" or "X mins".
  */
 export function formatCountdown(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  if (seconds <= 0) return '0 mins';
+  let h = Math.floor(seconds / 3600);
+  let m = Math.ceil((seconds % 3600) / 60);
+  
+  if (m === 60) {
+    h += 1;
+    m = 0;
+  }
+  
+  if (h > 0) {
+    if (m === 0) return `${h} hr${h !== 1 ? 's' : ''}`;
+    return `${h} hr${h !== 1 ? 's' : ''} ${m} min${m !== 1 ? 's' : ''}`;
+  }
+  return `${m} min${m !== 1 ? 's' : ''}`;
 }
 
 /**
